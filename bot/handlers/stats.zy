@@ -1,0 +1,156 @@
+import "../db.zy" as db
+
+on command "/stat" {
+  if chat.type != "private" => return null
+  if not (user.id in ADMIN_IDS) => return null
+  
+  stats = db.get_stats()
+  t_users = get_item(stats, 0)
+  t_invites = get_item(stats, 1)
+  t_credits = get_item(stats, 2)
+  a_invites = get_item(stats, 3)
+  a_credits = get_item(stats, 4)
+  
+  msg = """📊 *TraidX Stats Dashboard*
+
+👥 Total Users: ${t_users}
+📨 Total Invites: ${t_invites}
+💰 Total Credits: ${t_credits}
+
+📈 Avg Invites/User: ${a_invites}
+📊 Avg Credits/User: ${a_credits}
+"""
+  reply(msg, mode="Markdown")
+}
+
+on command "/credits" {
+  if chat.id == ENTRY_GROUP_ID => return null
+  
+  u_id = user.id
+  credits = db.get_credits(u_id)
+  invites = db.get_invites(u_id)
+  
+  name = "User ${u_id}"
+  if user.username != null => name = "@${user.username}"
+  
+  msg = """💎 Your TraidX Stats
+
+👤 User: ${name}
+
+📊 Your Performance
+💰 Credits: ${credits}
+👥 Invites: ${invites}
+
+🚀 Keep inviting friends to earn more rewards!"""
+  reply msg
+}
+
+on command "/rank" {
+  if chat.id == ENTRY_GROUP_ID => return null
+  top_users = db.get_top_users(10)
+  
+  if len(top_users) == 0 {
+    reply "No leaderboard data yet 📊"
+    return null
+  }
+  
+  md = """🏆 TraidX Referral Program Leaderboard
+
+Top performers of the community right now 👇
+
+"""
+  medals = ["🥇", "🥈", "🥉"]
+  
+  i = 1
+  for row in top_users {
+    u_id = row.user_id
+    uname = row.username
+    refs = row.referrals
+    
+    name = "User ${u_id}"
+    if uname != null => name = "@${uname}"
+    
+    prefix = ""
+    if i <= 3 {
+      prefix = get_item(medals, i-1)
+    } else {
+      prefix = "#${i}."
+    }
+    md = md + "${prefix} ${name}: ${refs} invites\n"
+    i = i + 1
+  }
+  
+  md = md + "\nKeep inviting and climb the ranks 🚀"
+  reply md
+}
+
+on command "/credits_rank" {
+  if chat.id == ENTRY_GROUP_ID => return null
+  top_users = db.credits_rank(10)
+  
+  if len(top_users) == 0 {
+    reply "No leaderboard data yet 📊"
+    return null
+  }
+  
+  md = """🏆 TraidX Credits Leaderboard
+
+Top performers of the community right now 👇
+
+"""
+  medals = ["🥇", "🥈", "🥉"]
+  
+  i = 1
+  for row in top_users {
+    u_id = row.user_id
+    uname = row.username
+    creds = row.credits
+    
+    name = "User ${u_id}"
+    if uname != null => name = "@${uname}"
+    
+    prefix = ""
+    if i <= 3 {
+      prefix = get_item(medals, i-1)
+    } else {
+      prefix = "${i}."
+    }
+    md = md + "${prefix} ${name}: ${creds} Credits\n"
+    i = i + 1
+  }
+  
+  md = md + "\nKeep Earning Points and climb the ranks 🚀"
+  reply md
+}
+
+on command "/invite" {
+  if chat.id == ENTRY_GROUP_ID => return null
+  
+  u_id = user.id
+  invites = db.get_invites(u_id)
+  credits = db.get_credits(u_id)
+  db.add_user(u_id, user.username, null)
+  
+  link = "https://t.me/TraidXpro_bot?start=ref_${u_id}"
+  
+  msg = """*🚀 Invite & Earn Rewards!*
+
+Share your personal referral link and earn rewards for every friend who joins and completes verification.
+
+🔗 *Your Invite Link:*
+`${link}`
+
+🎯 *How it works:*
+• Share your link with friends
+• They join using your link
+• They complete verification
+• You earn rewards 💰
+
+*Your Stats:*
+Total Invites: ${invites}
+Total Credits: ${credits}
+
+Start inviting now and grow your rewards! 🔥"""
+  
+  reply(msg, mode="Markdown")
+}

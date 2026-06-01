@@ -1,0 +1,116 @@
+db_execute("CREATE TABLE IF NOT EXISTS users (user_id INTEGER PRIMARY KEY, username TEXT, join_date TIMESTAMP, referrals INTEGER DEFAULT 0, credits INTEGER DEFAULT 0, referred_by INTEGER, verified INTEGER DEFAULT 0, warnings INTEGER DEFAULT 0)")
+
+export fn get_invites(user_id) {
+  row = db_fetchone("SELECT referrals FROM users WHERE user_id = ?", [user_id])
+  if row != null => return row.referrals
+  return 0
+}
+
+export fn get_credits(user_id) {
+  row = db_fetchone("SELECT credits FROM users WHERE user_id = ?", [user_id])
+  if row != null => return row.credits
+  return 0
+}
+
+export fn get_referrer(user_id) {
+  row = db_fetchone("SELECT referred_by FROM users WHERE user_id = ?", [user_id])
+  if row != null => return row.referred_by
+  return null
+}
+
+export fn add_referral(referrer_id) {
+  db_execute("INSERT INTO users (user_id, join_date) VALUES (?, CURRENT_TIMESTAMP) ON CONFLICT (user_id) DO NOTHING", [referrer_id])
+  db_execute("UPDATE users SET referrals = referrals + 1 WHERE user_id = ?", [referrer_id])
+  db_execute("UPDATE users SET credits = credits + 10 WHERE user_id = ?", [referrer_id])
+}
+
+export fn has_referrer(user_id) {
+  row = db_fetchone("SELECT referred_by FROM users WHERE user_id = ?", [user_id])
+  if row != null and row.referred_by != null => return true
+  return false
+}
+
+export fn add_user(user_id, username, referred_by) {
+  db_execute("INSERT INTO users (user_id, username, join_date) VALUES (?, ?, CURRENT_TIMESTAMP) ON CONFLICT (user_id) DO NOTHING", [user_id, username])
+  if username != null {
+    db_execute("UPDATE users SET username = ? WHERE user_id = ?", [username, user_id])
+  }
+  if referred_by != null {
+    db_execute("UPDATE users SET referred_by = ? WHERE user_id = ? AND referred_by IS NULL", [referred_by, user_id])
+  }
+}
+
+export fn verify_user(user_id) {
+  db_execute("UPDATE users SET verified = 1 WHERE user_id = ?", [user_id])
+}
+
+export fn is_verified(user_id) {
+  row = db_fetchone("SELECT verified FROM users WHERE user_id = ?", [user_id])
+  if row != null and row.verified == 1 => return true
+  return false
+}
+
+export fn user_exists(user_id) {
+  row = db_fetchone("SELECT 1 FROM users WHERE user_id = ?", [user_id])
+  if row != null => return true
+  return false
+}
+
+export fn get_top_users(limit) {
+  return db_fetchall("SELECT user_id, username, referrals FROM users ORDER BY referrals DESC LIMIT ?", [limit])
+}
+
+export fn get_stats() {
+  c_row = db_fetchone("SELECT COUNT(*) as c FROM users")
+  total_users = c_row.c
+  
+  s_row = db_fetchone("SELECT SUM(referrals) as s FROM users")
+  total_invites = s_row.s
+  if total_invites == null => total_invites = 0
+  
+  cr_row = db_fetchone("SELECT SUM(credits) as s FROM users")
+  total_credits = cr_row.s
+  if total_credits == null => total_credits = 0
+  
+  avg_invites = 0
+  avg_credits = 0
+  if total_users > 0 {
+    avg_invites = total_invites / total_users
+    avg_credits = total_credits / total_users
+  }
+  return [total_users, total_invites, total_credits, avg_invites, avg_credits]
+}
+
+export fn update_credits(user_id, amount, mode) {
+  if mode == "add" {
+    db_execute("UPDATE users SET credits = credits + ? WHERE user_id = ?", [amount, user_id])
+  } else {
+    db_execute("UPDATE users SET credits = credits - ? WHERE user_id = ?", [amount, user_id])
+  }
+}
+
+export fn get_user_id(identifier) {
+  id_str = replace(str(identifier), "@", "")
+  if is_digit(id_str) => return id_str
+  row = db_fetchone("SELECT user_id FROM users WHERE username = ?", [id_str])
+  if row != null => return row.user_id
+  return null
+}
+
+export fn credits_rank(limit) {
+  return db_fetchall("SELECT user_id, username, credits FROM users ORDER BY credits DESC LIMIT ?", [limit])
+}
+
+export fn add_warning(user_id) {
+  db_execute("INSERT INTO users (user_id, warnings) VALUES (?, 1) ON CONFLICT (user_id) DO UPDATE SET warnings = ifnull(warnings, 0) + 1", [user_id])
+}
+
+export fn get_warnings(user_id) {
+  row = db_fetchone("SELECT warnings FROM users WHERE user_id = ?", [user_id])
+  if row != null and row.warnings != null => return row.warnings
+  return 0
+}
+
+export fn reset_warnings(user_id) {
+  db_execute("UPDATE users SET warnings = 0 WHERE user_id = ?", [user_id])
+}

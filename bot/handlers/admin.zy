@@ -1,0 +1,181 @@
+import "../db.zy" as db
+
+on command "/admin" {
+  if not (user.id in ADMIN_IDS) {
+    reply "Admin only command."
+    return null
+  }
+  if chat.type != "private" => return null
+  
+  reply(
+    "⚙️ Admin Panel\n\nWhat would you like to do?",
+    inline=[ ["💰 Edit Points", "edit_points"] ]
+  )
+}
+
+on callback "edit_points" {
+  if not (user.id in ADMIN_IDS) => return null
+  if chat.type != "private" => return null
+  
+  set_key(admin_states, user.id, "ask_user")
+  reply "👤 Send User ID or username:"
+}
+
+on callback "add_points" {
+  if not (user.id in ADMIN_IDS) => return null
+  
+  identifier = get_key(admin_target, user.id)
+  u_id = db.get_user_id(identifier)
+  if u_id == null {
+    reply "❌ User not found. Please check the username or ID."
+    return null
+  }
+  
+  amount = int(get_key(admin_amount, user.id))
+  db.update_credits(u_id, amount, "add")
+  reply "✅ ${amount} credits Added to user ${identifier}"
+  
+  pop_key(admin_states, user.id)
+  pop_key(admin_target, user.id)
+  pop_key(admin_amount, user.id)
+}
+
+on callback "sub_points" {
+  if not (user.id in ADMIN_IDS) => return null
+  
+  identifier = get_key(admin_target, user.id)
+  u_id = db.get_user_id(identifier)
+  if u_id == null {
+    reply "❌ User not found. Please check the username or ID."
+    return null
+  }
+  
+  amount = int(get_key(admin_amount, user.id))
+  db.update_credits(u_id, amount, "sub")
+  reply "✅ ${amount} Credits Deducted from user ${identifier}"
+  
+  pop_key(admin_states, user.id)
+  pop_key(admin_target, user.id)
+  pop_key(admin_amount, user.id)
+}
+
+on command "/warn" {
+  if message.reply_to_message != null and message.reply_to_message.from_user.is_bot {
+    reply "You cannot warn a bot."
+    return null
+  }
+  
+  if not (user.id in ADMIN_IDS) {
+    reply "Admin only command."
+    return null
+  }
+  
+  if message.reply_to_message == null {
+    reply "Reply to a user to warn."
+    return null
+  }
+  
+  target = message.reply_to_message.from_user
+  u_id = target.id
+  
+  db.add_warning(u_id)
+  count = db.get_warnings(u_id)
+  
+  if count >= MAX_WARN {
+    restrict(u_id, can_send=false)
+    db.reset_warnings(u_id)
+    reply "🚫 ${target.first_name} muted after ${MAX_WARN} warnings."
+    return null
+  }
+  
+  reply "⚠️ Warning ${count}/${MAX_WARN} for ${target.first_name}"
+}
+
+on command "/warnings" {
+  if message.reply_to_message == null {
+    reply "Reply to a user."
+    return null
+  }
+  u_id = message.reply_to_message.from_user.id
+  count = db.get_warnings(u_id)
+  reply "⚠️ User has ${count} warnings."
+}
+
+on command "/reset_warn" {
+  if chat.type == "private" {
+    reply "This bot only works in groups"
+    return null
+  }
+  if not (user.id in ADMIN_IDS) {
+    reply "Only admins are allowed to run this Command."
+    return null
+  }
+  if message.reply_to_message == null {
+    reply "Reply to an user to use this command."
+    return null
+  }
+  if message.reply_to_message.from_user.is_bot {
+    reply "You cannot reset warnings of a bot."
+    return null
+  }
+  
+  t_id = message.reply_to_message.from_user.id
+  db.reset_warnings(t_id)
+  reply "Successfully reset ${t_id}s warnings"
+}
+
+on command "/mute" {
+  if chat.type == "private" {
+    reply "This command works only in group."
+    return null
+  }
+  if not (user.id in ADMIN_IDS) {
+    reply "You need to be an admin to do this."
+    return null
+  }
+  if message.reply_to_message == null {
+    reply "Reply to a user to mute them."
+    return null
+  }
+  
+  sender_id = user.id
+  target = message.reply_to_message.from_user
+  target_id = target.id
+  
+  if sender_id == target_id {
+    reply "You cannot mute yourself."
+    return null
+  }
+  if target.is_bot {
+    reply "You cannot mute a bot."
+    return null
+  }
+  
+  restrict(target_id, can_send=false)
+  reply "🔇 Muted: ${target.first_name}"
+}
+
+on command "/unmute" {
+  if chat.type == "private" {
+    reply "This command works only in group."
+    return null
+  }
+  if not (user.id in ADMIN_IDS) {
+    reply "You need to be an admin to do this."
+    return null
+  }
+  
+  if len(args) < 1 {
+    reply "Usage: /unmute user_id"
+    return null
+  }
+  
+  target_id = int(get_item(args, 0))
+  if user.id == target_id {
+    reply "You cannot unmute yourself."
+    return null
+  }
+  
+  restrict(target_id, can_send=true)
+  reply "🔊 Unmuted: ${target_id}"
+}

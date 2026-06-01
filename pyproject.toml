@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "zyra-lang"
+version = "0.2.0"
+description = "A lightweight interpreted DSL for Telegram Bots"
+readme = "README.md"
+authors = [
+    {name = "Zyra Maintainers", email = "maintainers@zyra.example.com"}
+]
+keywords = ["telegram", "bot", "dsl", "interpreted", "scripting"]
+license = {text = "MIT"}
+requires-python = ">=3.12"
+dependencies = [
+    "python-telegram-bot>=21.0",
+    "apscheduler>=3.10.0",
+    "pytz",
+    "tzlocal"
+]
+
+[project.urls]
+Homepage = "https://github.com/user/zyra-lang"
+Repository = "https://github.com/user/zyra-lang"
+Issues = "https://github.com/user/zyra-lang/issues"
+
+[project.optional-dependencies]
+ai = ["openai>=1.0.0"]
+watch = ["watchdog>=4.0.0"]
+
+[project.scripts]
+zyra = "zyra.cli:main"
+
+[tool.setuptools]
+packages = ["zyra", "zyra.runtime"]
+
+[tool.setuptools.package-data]
+zyra = ["*.py"]

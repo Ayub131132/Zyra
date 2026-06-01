@@ -1,0 +1,43 @@
+export fn captcha(user_id, user_name, chat_title) {
+  num1 = random(1, 10)
+  num2 = random(1, 10)
+  correct = num1 + num2
+  
+  options = [correct]
+  while len(options) < 4 {
+    fake = correct + random(-5, 10)
+    
+    if fake >= 0 and not (fake in options) {
+      options.append(fake)
+    }
+  }
+
+  for i in [0, 1, 2, 3] {
+    j = random(0, 3)
+    temp = get_item(options, i)
+    set_item(options, i, get_item(options, j))
+    set_item(options, j, temp)
+  }
+
+  msg = """👋 Hey ${user_name}!
+
+Welcome to <b>${chat_title}</b> 🚀
+
+🧠 Solve this CAPTCHA to verify you're human:
+
+<b>${num1} + ${num2} = ?</b>
+"""
+
+  inline_keyboard = [
+    [ [str(get_item(options, 0)), str(get_item(options, 0))], [str(get_item(options, 1)), str(get_item(options, 1))] ],
+    [ [str(get_item(options, 2)), str(get_item(options, 2))], [str(get_item(options, 3)), str(get_item(options, 3))] ]
+  ]
+
+  d = dict()
+  set_key(d, "msg", msg)
+  set_key(d, "keyboard", inline_keyboard)
+  set_key(d, "correct", correct)
+  set_key(d, "num1", num1)
+  set_key(d, "num2", num2)
+  return d
+}

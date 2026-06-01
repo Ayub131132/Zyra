@@ -1,0 +1,72 @@
+import "../db.zy" as db
+import "../captcha.zy" as cap
+
+on command "/start" {
+  MAIN_GROUP_ID = -1003709717427
+  
+  if chat.id == MAIN_GROUP_ID {
+    return null
+  }
+  
+  if chat.type == "private" {
+    user_name = user.first_name
+    user_id = user.id
+    username = user.username
+    
+    db.add_user(user_id, username, null)
+    
+    if referrer != null {
+      if referrer != user_id and not db.has_referrer(user_id) and db.user_exists(referrer) {
+        db.add_user(user_id, username, referrer)
+        
+        reply """🎉 You're invited!
+
+You joined using a referral link ✅
+Your referrer will be credited after you complete verification 🎯
+
+🚀 Next step:
+Join the community and complete verification to unlock full access. 
+
+Let’s get started 👇"""
+        
+        c = cap.captcha(user_id, user_name, "Traidx")
+        
+        set_key(captcha_answers, user_id, c.correct)
+        
+        reply(c.msg, mode="HTML", inline=c.keyboard)
+        return null
+      }
+    }
+    
+    if not db.is_verified(user_id) {
+      c = cap.captcha(user_id, user_name, "Traidx")
+      
+      set_key(captcha_answers, user_id, c.correct)
+      
+      reply(c.msg, mode="HTML", inline=c.keyboard)
+      return null
+    }
+    
+    db.add_user(user_id, username, null)
+    
+    msg = """👋 Welcome to <b>TraidX</b>
+
+To get started and stay connected, you can join our official spaces below.
+
+💬 Community discussions
+📢 Latest updates
+🚀 Everything in one place
+
+Choose where you’d like to go 👇"""
+    
+    reply(
+      msg,
+      mode="HTML",
+      inline=[
+        ["TraidX Community", url="https://t.me/+Y6Ts-hDw_KA3ZWFl"],
+        ["📰 News", url="https://t.me/TraidxNewsTicker"],
+        ["📢 Updates", url="https://t.me/tradexyza"]
+      ]
+    )
+  }
+}

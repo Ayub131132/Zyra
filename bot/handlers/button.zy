@@ -1,0 +1,88 @@
+import "../db.zy" as db
+
+on callback "^[0-9]+$" {
+  user_id = user.id
+  selected = int(query.data)
+  correct = get_key(captcha_answers, user_id)
+
+  if correct == null {
+    alert("Please try again: ", mode="alert")
+    return null
+  }
+
+  if selected != correct {
+    alert("❌ Wrong answer", mode="alert")
+    return null
+  }
+
+  delete()
+  
+  if not db.is_verified(user_id) {
+    db.verify_user(user_id)
+    referrer_id = db.get_referrer(user_id)
+    if referrer_id != null {
+      db.add_referral(referrer_id)
+      invites = db.get_invites(referrer_id)
+      credits = db.get_credits(referrer_id)
+      
+      r_msg = """🎉 Congratulations 
+
+👤 User, ${user_id} has join TraidX via your invite link. 
+💰You have successfully recieved Your reward! 
+
+📊Your Stats:
+👥Total Invites: ${invites}
+💎Total Credits: ${credits}"""
+      send(referrer_id, r_msg)
+    }
+  }
+
+  msg = """<b>🎉 Congratulations, you are now an official part of Traidx. 🎉</b>
+
+Welcome to the ecosystem. Below you’ll find our official groups:
+
+
+<b>📢 Signals & Updates</b>
+Get trading signals, live meeting access, and all important Traidx updates.
+<b>📰 News Ticker</b>
+Receive filtered market news powered by the NewsAI, so you always stay ahead.
+<b>👥 Trading Community</b>
+Connect with other traders, exchange ideas, and become part of a network of like-minded people.
+
+
+👇 Tap the buttons below to join the groups and unlock the full Traidx experience."""
+  
+  reply(
+    msg,
+    mode="HTML",
+    inline=[
+      ["📢 Signals and Updates", url="https://t.me/tradexyza"],
+      ["📰 News-ticker", url="https://t.me/TraidxNewsTicker"],
+      ["💬 Community", url="https://t.me/+Y6Ts-hDw_KA3ZWFl"]
+    ]
+  )
+  
+  req = get_key(join_requests, user_id)
+  if req != null {
+    approve_join(req)
+    
+    welcome_msg = """
+<b>Welcome to the official Traidx community.</b>
+
+This is the place to connect with like-minded traders, exchange ideas, discuss market opportunities, share experiences, and grow together inside the Traidx ecosystem.
+Use this group to build valuable connections, learn from others, and become part of a strong network focused on progress and success.
+<b>📌 Community Rules</b>
+🚫 No spam
+🚫 No advertising
+🚫 No hate speech
+🚫 No insults or harassment
+🤝 Respect all members
+💬 Stay on topic
+📈 Keep the chat professional, helpful, and valuable for everyone.
+"""
+    send(user_id, welcome_msg, mode="HTML")
+  }
+
+  pop_key(join_requests, user_id)
+  pop_key(captcha_answers, user_id)
+}

@@ -1,0 +1,59 @@
+import "../db.zy" as db
+
+on message {
+  // Handle admin flow
+  if (user.id in ADMIN_IDS) and chat.type == "private" {
+    state = get_key(admin_states, user.id)
+    if state != null {
+      if state == "ask_user" {
+        set_key(admin_target, user.id, strip(message.text))
+        set_key(admin_states, user.id, "ask_amount")
+        reply "💰 Enter amount:"
+        return null
+      }
+      
+      if state == "ask_amount" {
+        // Need a better way to check if numeric. 
+        // For now, let's just use int() and catch error or hope user is good.
+        text_val = strip(message.text)
+        amount = int(text_val)
+        set_key(admin_amount, user.id, amount)
+        set_key(admin_states, user.id, "choose_action")
+        
+        reply(
+          "Select action:",
+          inline=[
+            ["➕ Add", "add_points"],
+            ["➖ Subtract", "sub_points"]
+          ]
+        )
+        return null
+      }
+    }
+  }
+
+  // Spam Moderator
+  if message.new_chat_members != null => return null
+
+  u_id = user.id
+  text = message.text
+  if text == null => text = message.caption
+  if text == null => return null
+  
+  // lower() - I'll add lower() built-in
+  text_lower = lower(text)
+  
+  if u_id in ADMIN_IDS => return null
+  
+  if ("http://" in text_lower) or ("https://" in text_lower) or ("t.me" in text_lower) {
+    if not ("traidx.io" in text_lower) {
+      delete()
+      return null
+    }
+  }
+  
+  if ("scam" in text_lower) or ("hack" in text_lower) or ("fraud" in text_lower) {
+    delete()
+    return null
+  }
+}

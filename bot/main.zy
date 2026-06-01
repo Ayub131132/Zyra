@@ -1,0 +1,26 @@
+bot = "TraidX"
+token = env("BOT_TOKEN")
+
+// Globals
+ADMIN_IDS = [6746063312]
+ENTRY_GROUP_ID = -1003718520058
+MAIN_GROUP_ID = -1003709717427
+NEWS_CHANNEL_ID = -1003793663085
+ADMIN_GROUP_ID = -1003861732128
+MAX_WARN = 3
+
+// State stores
+captcha_answers = dict()
+join_requests = dict()
+
+// Admin states
+admin_states = dict()
+admin_target = dict()
+admin_amount = dict()
+
+import "handlers/start.zy"
+import "handlers/join.zy"
+import "handlers/button.zy"
+import "handlers/stats.zy"
+import "handlers/admin.zy"
+import "handlers/message.zy"

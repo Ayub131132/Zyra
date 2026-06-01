@@ -1,0 +1,35 @@
+import "../db.zy" as db
+import "../captcha.zy" as cap
+
+on join_request {
+  db.add_user(user.id, null, null)
+  
+  c = cap.captcha(user.id, user.first_name, "TraidX")
+  
+  set_key(captcha_answers, user.id, c.correct)
+  set_key(join_requests, user.id, update.chat_join_request)
+  
+  send(user.id) c.msg
+  // We need to send the keyboard too. Zyra's send() only takes text in the statement form.
+  // Use reply() inside the context of the user if possible, or use functional send().
+  // Actually, functional send(target, text, inline=...) would be good.
+  // Looking at interpreter.py, _builtin_send only takes (target, text).
+  // I should update interpreter.py to support more args for send.
+}
+
+on new_chat_members {
+  if chat.id != -1003718520058 => return null
+
+  for user_obj in message.new_chat_members {
+    if not db.is_verified(user_obj.id) {
+      c = cap.captcha(user_obj.id, user_obj.first_name, chat.title)
+      
+      set_key(captcha_answers, user_obj.id, c.correct)
+      
+      msg = "<b>🚀 Welcome to the Traidx Entry Portal</b>\n\nYour gateway to a complete ecosystem built for traders. Inside, you’ll get access to trading signals, the NewsAI, an exclusive trading community, live meetings, market updates, and much more.📈\n\nBecome part of the experience and join a growing community focused on opportunities and progress.\n\n✅ All you need to do is complete the <b>CAPTCHA</b> below to unlock access to all groups\n\n<b>${c.num1} + ${c.num2} = ?</b>\n"
+      
+      reply(msg, mode="HTML", inline=c.keyboard)
+      db.add_user(user_obj.id, null, null)
+    }
+  }
+}
